@@ -1,0 +1,15 @@
+# Leggilo: PWA per leggere e ascoltare i libri di Kavita.
+# Pubblicata su https://leggilo.bee-miaplacidus.ts.net tramite ingresso-leggilo (~/sistemista/ingresso).
+# Nessuna porta aperta sulla rete di casa.
+name: leggilo
+
+services:
+  leggilo:
+    build: ..
+    image: leggilo:locale
+    container_name: leggilo
+    restart: unless-stopped
+    networks: [default, kavita_default]
+
+networks:
+  kavita_default: {external: true}

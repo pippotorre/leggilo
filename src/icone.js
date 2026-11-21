@@ -1,0 +1,24 @@
+// Icone SVG in linea (stile contorno, 24x24)
+const s = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+export const icone = {
+  cerca: s('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+  indietro: s('<path d="M15 18l-6-6 6-6"/>'),
+  menu: s('<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>'),
+  sole: s('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  luna: s('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+  esci: s('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'),
+  aggiorna: s('<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/>'),
+  play: s('<path d="M7 4.5v15l12-7.5z"/>'),
+  pausa: s('<path d="M8 5v14M16 5v14"/>'),
+  avanti: s('<path d="M5 5v14l9-7zM19 5v14"/>'),
+  dietro: s('<path d="M19 5v14l-9-7zM5 5v14"/>'),
+  testo: s('<path d="M4 7V5h16v2M9 19h6M12 5v14"/>'),
+  indice: s('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),
+  scarica: s('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>'),
+  nuvola: s('<path d="M7 18a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 9a4 4 0 0 1 0 9z"/><path d="m9 13 2 2 4-4"/>'),
+  cestino: s('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
+  libro: s('<path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM20 19v3H6"/>'),
+  meno: s('<path d="M5 12h14"/>'),
+  chiudi: s('<path d="M6 6l12 12M18 6 6 18"/>'),
+  piu: s('<path d="M12 5v14M5 12h14"/>'),
+}
