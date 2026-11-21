@@ -1,5 +1,6 @@
 // Lettore EPUB basato su foliate-js
 import 'foliate-js/view.js'
+import { riconosciLingua } from '../voce.js'
 
 const MARGINI = { stretti: { gap: '4%', margin: '32px' }, medi: { gap: '7%', margin: '48px' }, ampi: { gap: '11%', margin: '64px' } }
 
@@ -97,7 +98,12 @@ export async function apriEpub(contenitore, blob, { posizione, onPosizione, onTo
     await view.init({ showTextStart: true })
   }
 
-  const lingua = (Array.isArray(view.book.metadata?.language) ? view.book.metadata.language[0] : view.book.metadata?.language) || 'it'
+  const linguaDichiarata = (Array.isArray(view.book.metadata?.language) ? view.book.metadata.language[0] : view.book.metadata?.language) || 'it'
+  // Lingua riconosciuta dal testo della sezione aperta (i metadati sono spesso sbagliati)
+  const linguaTesto = () => {
+    const doc = view.renderer.getContents()[0]?.doc
+    return riconosciLingua(doc?.body?.textContent?.slice(0, 20000), linguaDichiarata.slice(0, 2))
+  }
 
   // Sorgente per la lettura ad alta voce
   function sorgenteVoce() {
@@ -127,7 +133,7 @@ export async function apriEpub(contenitore, blob, { posizione, onPosizione, onTo
 
   return {
     tipo: 'epub',
-    lingua,
+    get lingua() { return linguaTesto() },
     titolo: view.book.metadata?.title,
     indice: () => view.book.toc ?? [],
     vaiA: href => view.goTo(href),

@@ -153,7 +153,8 @@ export async function vistaLettore(app, chapterId, seriesId) {
       if (controller.haTesto && !(await controller.haTesto())) {
         avviso('Questa pagina non contiene testo leggibile (forse è una scansione).', null, 5000)
       }
-      lettoreVoce.avvia(controller.sorgenteVoce(), { lingua: controller.lingua, titolo: scheda.nome, autore: scheda.autore })
+      const lingua = controller.linguaAttuale ? await controller.linguaAttuale() : controller.lingua
+      lettoreVoce.avvia(controller.sorgenteVoce(), { lingua, titolo: scheda.nome, autore: scheda.autore })
     }
   }
 

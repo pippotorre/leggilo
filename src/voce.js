@@ -22,11 +22,34 @@ export const salvaPreferenzeVoce = p => scrivi('voce', { ...preferenzeVoce(), ..
 export async function scegliVoce(lingua = 'it') {
   const voci = await elencoVoci()
   const { voce } = preferenzeVoce()
-  const salvata = voci.find(v => v.voiceURI === voce)
-  if (salvata) return salvata
   const l = (lingua || 'it').toLowerCase().slice(0, 2)
-  const stessa = voci.filter(v => v.lang?.toLowerCase().startsWith(l))
+  const stessaLingua = v => v.lang?.toLowerCase().replace('_', '-').startsWith(l)
+  const salvata = voci.find(v => v.voiceURI === voce)
+  // La voce scelta si usa per i libri nella sua lingua; per le altre lingue si sceglie da sola
+  if (salvata && stessaLingua(salvata)) return salvata
+  const stessa = voci.filter(stessaLingua)
   return stessa.find(v => /enhanced|premium|neural|natural/i.test(v.name)) || stessa.find(v => v.localService) || stessa[0] || voci[0] || null
+}
+
+// Riconosce la lingua del testo contando le parole più comuni.
+// Serve perché molti EPUB dichiarano una lingua sbagliata (spesso "en") nei metadati.
+const PAROLE = {
+  it: ['il', 'lo', 'la', 'che', 'di', 'non', 'per', 'una', 'della', 'del', 'sono', 'è', 'con', 'gli', 'anche', 'come', 'nel', 'alla', 'questo', 'ma'],
+  en: ['the', 'and', 'of', 'to', 'is', 'that', 'with', 'was', 'for', 'it', 'you', 'this', 'are', 'have', 'not', 'but', 'from', 'they', 'which', 'be'],
+  fr: ['le', 'les', 'des', 'et', 'est', 'une', 'que', 'pour', 'dans', 'pas', 'qui', 'sur', 'au', 'avec', 'ce', 'sont', 'mais', 'nous', 'vous', 'aux'],
+  es: ['el', 'los', 'las', 'y', 'que', 'en', 'una', 'por', 'con', 'para', 'es', 'del', 'se', 'no', 'pero', 'como', 'más', 'fue', 'está', 'muy'],
+  de: ['der', 'die', 'und', 'das', 'ist', 'nicht', 'ein', 'eine', 'zu', 'mit', 'den', 'von', 'sich', 'auf', 'für', 'auch', 'dem', 'es', 'wir', 'aber'],
+}
+export function riconosciLingua(testo, riserva = 'it') {
+  const parole = (testo || '').toLowerCase().match(/\p{L}+/gu)?.slice(0, 3000) ?? []
+  if (parole.length < 30) return riserva
+  let migliore = riserva, punti = 0
+  for (const [lingua, elenco] of Object.entries(PAROLE)) {
+    const set = new Set(elenco)
+    const n = parole.reduce((t, w) => t + (set.has(w) ? 1 : 0), 0)
+    if (n > punti) { punti = n; migliore = lingua }
+  }
+  return punti >= 5 ? migliore : riserva
 }
 
 // Divide un testo in frasi

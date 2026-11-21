@@ -73,7 +73,8 @@ Note: per gli EPUB `pageNum` è l'indice (da 0) nell'ordine di lettura, come le 
 ## Da fare
 
 - [ ] Installazione sul serverino e prova con il Kavita vero
-- [ ] Prove su iPhone e Android reali (voci, schermo bloccato, installazione)
+- [x] Prima prova di Pippo sul telefono: voce con accento inglese → corretto (riconoscimento della lingua)
+- [ ] Altre prove su iPhone e Android reali (voci, schermo bloccato, installazione)
 - [ ] Fissare la versione dell'immagine Caddy e Node invece di `2-alpine` / `22-alpine`
 
 ## Decisioni
@@ -85,6 +86,8 @@ Note: per gli EPUB `pageNum` è l'indice (da 0) nell'ordine di lettura, come le 
 | 21/11/2026 | JavaScript invece di TypeScript: meno strumenti da mantenere, nessun passaggio di compilazione dei tipi |
 | 21/11/2026 | Il libro aperto viene salvato automaticamente sul dispositivo, così si continua anche offline |
 | 21/11/2026 | Pubblicazione dal Mac con `deploy/pubblica.sh` (rsync + build sul server): il server non ha bisogno di credenziali GitHub |
+
+| 21/11/2026 | Voce: la lingua del libro si riconosce dal testo, non dai metadati (molti EPUB dichiarano "en" anche se sono in italiano e veniva scelta una voce inglese). La voce scelta a mano si usa solo per i libri nella sua lingua |
 
 ## Problemi noti
 

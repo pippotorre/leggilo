@@ -2,7 +2,7 @@
 import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { h } from '../util.js'
-import { frasi } from '../voce.js'
+import { frasi, riconosciLingua } from '../voce.js'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -96,6 +96,7 @@ export async function apriPdf(contenitore, blob, { posizione, onPosizione, onToc
   return {
     tipo: 'pdf',
     lingua: 'it',
+    async linguaAttuale() { return riconosciLingua(await testoPagina(pagina)) },
     titolo,
     indice: () => [],
     avanti, indietro, vai,
