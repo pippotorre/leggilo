@@ -8,10 +8,14 @@ let db
 function apri() {
   if (db) return db
   db = new Promise((ok, ko) => {
-    const r = indexedDB.open(DB, 1)
+    const r = indexedDB.open(DB, 2)
     r.onupgradeneeded = () => {
-      r.result.createObjectStore('file')    // chiave: chapterId -> Blob
-      r.result.createObjectStore('schede')  // chiave: chapterId -> dati del libro
+      const d = r.result
+      const crea = n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n) }
+      crea('file')        // libri di Kavita salvati: chapterId -> Blob
+      crea('schede')      // libri di Kavita salvati: chapterId -> dati
+      crea('locali')      // libri importati dal dispositivo: id -> dati (con copertina)
+      crea('filelocali')  // libri importati dal dispositivo: id -> Blob
     }
     r.onsuccess = () => ok(r.result)
     r.onerror = () => ko(r.error)
@@ -19,7 +23,7 @@ function apri() {
   return db
 }
 
-async function tx(store, modo, fn) {
+export async function tx(store, modo, fn) {
   const d = await apri()
   return new Promise((ok, ko) => {
     const t = d.transaction(store, modo)

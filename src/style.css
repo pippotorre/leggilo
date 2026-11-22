@@ -261,3 +261,22 @@ img { display: block; }
 body:has(.lettore) #avvisi { bottom: calc(132px + var(--safe-bottom)); }
 [hidden] { display: none !important; }
 .piede, .frase-letta { z-index: 5; }
+
+/* Benvenuto, fonti, modifica, informazioni */
+.benvenuto { text-align: center; padding: 40px 12px; display: grid; gap: 12px; justify-items: center; max-width: 420px; margin: 0 auto; }
+.benvenuto img { width: 76px; height: 76px; margin-bottom: 6px; }
+.benvenuto h2 { margin: 0; font-size: 22px; }
+.benvenuto p { margin: 0 0 8px; color: var(--color-text-soft); }
+.benvenuto .btn { width: 100%; max-width: 300px; }
+.benvenuto .btn svg, .btn svg { width: 20px; height: 20px; }
+h2.fonte { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 8px 0 14px; padding-top: 8px; border-top: 1px solid var(--color-border); }
+h2.fonte:first-child { border-top: none; padding-top: 0; }
+h2.fonte svg { width: 20px; height: 20px; color: var(--color-primary); }
+.modifica { display: grid; gap: 12px; margin: 16px 0; }
+.modifica .campo input { min-height: 48px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); font-size: 16px; }
+.login form .btn { width: 100%; }
+.testo-info { max-width: 640px; }
+.testo-info .logo-grande { width: 72px; height: 72px; margin: 16px 0 8px; }
+.testo-info h2 { margin: 0; }
+.testo-info h3 { margin: 24px 0 6px; font-size: 16px; }
+.testo-info p { color: var(--color-text-soft); margin: 0 0 10px; line-height: 1.6; }

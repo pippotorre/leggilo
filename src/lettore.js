@@ -7,6 +7,7 @@ import { leggi, scrivi, predefiniteLettura, applicaTema, temaAttivo } from './im
 import { Lettore, voceDisponibile, elencoVoci, preferenzeVoce, salvaPreferenzeVoce } from './voce.js'
 import { capitoliDi } from './viste.js'
 import { coloriTema } from './temi.js'
+import * as locali from './locali.js'
 
 const lettoreVoce = voceDisponibile ? new Lettore() : null
 let chiusuraCorrente = null
@@ -31,7 +32,11 @@ async function recuperaScheda(chapterId, seriesId) {
   }
 }
 
-export async function vistaLettore(app, chapterId, seriesId) {
+// sorgente: { tipo: 'kavita', chapterId, seriesId } oppure { tipo: 'locale', id }
+export async function vistaLettore(app, sorgente) {
+  const locale_ = sorgente.tipo === 'locale'
+  const chapterId = sorgente.chapterId
+  const chiavePos = locale_ ? 'L' + sorgente.id : chapterId
   chiudiLettore()
   const imp = { ...predefiniteLettura, ...leggi('lettura', {}) }
   const pagina = h('div', { class: 'pagina' }, rotella('Apro il libro…'))
@@ -52,14 +57,17 @@ export async function vistaLettore(app, chapterId, seriesId) {
   app.replaceChildren(radice)
 
   let scheda, controller, ultimaPosizione
-  const esci = () => { location.hash = scheda ? `#/libro/${scheda.seriesId}` : '#/' }
+  const esci = () => { location.hash = locale_ ? `#/locale/${sorgente.id}` : (scheda ? `#/libro/${scheda.seriesId}` : '#/') }
 
   // Progressi
-  const inviaAKavita = debounce(() => {
+  const salvaProgressoFonte = () => {
     if (!ultimaPosizione) return
-    inviaProgresso(progressoKavita(ultimaPosizione))
-  }, 3000)
-  const salvaLocale = debounce(p => salvaPosizioneLocale(chapterId, p), 400)
+    if (locale_) locali.aggiorna(sorgente.id, { avanzamento: avanzamentoDi(ultimaPosizione), letto: Date.now() })
+    else inviaProgresso(progressoKavita(ultimaPosizione))
+  }
+  const inviaAKavita = debounce(salvaProgressoFonte, locale_ ? 1000 : 3000)
+  const salvaLocale = debounce(p => salvaPosizioneLocale(chiavePos, p), 400)
+  const avanzamentoDi = p => p.pagina ? (p.totale > 1 ? p.pagina / p.totale : 1) : (p.frazione || 0)
 
   function progressoKavita(p) {
     let pageNum
@@ -83,10 +91,18 @@ export async function vistaLettore(app, chapterId, seriesId) {
 
 
   try {
-    scheda = await recuperaScheda(chapterId, seriesId)
+    let blob
+    if (locale_) {
+      scheda = await locali.scheda(sorgente.id)
+      if (!scheda) throw new Error('Questo libro non è più sul dispositivo.')
+      blob = await locali.file(sorgente.id)
+      if (!blob) throw new Error('Il file del libro non è più disponibile.')
+    } else {
+      scheda = await recuperaScheda(chapterId, sorgente.seriesId)
+      blob = await fileLibro(chapterId)
+    }
     titolo.textContent = scheda.nome
     document.title = `${scheda.nome} · Leggilo`
-    let blob = await fileLibro(chapterId)
     if (!blob) {
       pagina.replaceChildren(rotella('Scarico il libro…'))
       blob = await api.scaricaCapitolo(chapterId, scheda.formato)
@@ -96,9 +112,9 @@ export async function vistaLettore(app, chapterId, seriesId) {
     }
 
     // Posizione: la più recente tra quella del dispositivo e quella di Kavita
-    const locale = posizioneLocale(chapterId)
+    const locale = posizioneLocale(chiavePos)
     let server = null
-    try { server = await api.progresso(chapterId) } catch {}
+    if (!locale_) try { server = await api.progresso(chapterId) } catch {}
     const quandoServer = server?.lastModifiedUtc ? Date.parse(server.lastModifiedUtc) : 0
     const usaLocale = locale && (!server || (locale.quando || 0) >= quandoServer - 5000)
 
@@ -165,7 +181,7 @@ export async function vistaLettore(app, chapterId, seriesId) {
   addEventListener('leggilo:tema', suTema)
 
   chiusuraCorrente = () => {
-    if (ultimaPosizione) inviaProgresso(progressoKavita(ultimaPosizione))
+    salvaProgressoFonte()
     if (lettoreVoce) {
       lettoreVoce.ferma()
       lettoreVoce.removeEventListener('stato', aggiornaAscolta)

@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+process.env.VITE_VERSIONE ??= JSON.parse(readFileSync(new URL('./package.json', import.meta.url))).version
 
 // In sviluppo /api viene inoltrato a KAVITA_URL (es. un Kavita di prova).
 const kavita = process.env.KAVITA_URL || 'http://localhost:5000'

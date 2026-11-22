@@ -1,14 +1,30 @@
 # Leggilo
 
-PWA per leggere e ascoltare gli ebook (EPUB e PDF) della libreria Kavita del serverino, da iPhone, Android e computer.
+App (PWA) per leggere e ascoltare ebook EPUB e PDF, da iPhone, Android e computer.
 
-- Accesso con l'utente Kavita; posizione di lettura salvata su Kavita (la ritrovi anche nell'app Kavita)
+- **Libri del telefono:** si importano dal dispositivo e restano lì; nessun server necessario
+- **Kavita facoltativo:** collegando un server Kavita si aggiungono i suoi libri; la posizione di lettura viene salvata su Kavita (la ritrovi anche nell'app Kavita)
 - Libreria per autore con ricerca e "Continua a leggere"
 - Lettore EPUB (foliate-js) con dimensione del testo, interlinea, margini e tema carta/notte
 - Lettore PDF (pdf.js)
 - Lettura ad alta voce con le voci del dispositivo, frase evidenziata, velocità e voce regolabili
 - Libri salvati sul dispositivo per la lettura offline
 - Installabile come app e utilizzabile offline
+
+## Due versioni dallo stesso codice
+
+| Versione | Indirizzo | Per chi | Kavita |
+|---|---|---|---|
+| Pubblica | `https://leggilo.entratadisicurezza.com` (GitHub Pages) | amici, store | si inserisce l'indirizzo del server (es. `https://leggilo.bee-miaplacidus.ts.net`) |
+| Serverino | `https://leggilo.bee-miaplacidus.ts.net` | Pippo e famiglia | stesso indirizzo, basta utente e password |
+
+La versione pubblica si pubblica da sola a ogni push su `main` (workflow `.github/workflows/pages.yml`). Per usare Kavita da lì, il proxy del serverino aggiunge le intestazioni CORS solo per `https://leggilo.entratadisicurezza.com`.
+
+### Impostazioni una tantum per GitHub Pages
+
+1. GitHub → repository → Settings → Pages → Source: **GitHub Actions**
+2. DNS di `entratadisicurezza.com` (Tophost): record **CNAME** `leggilo` → `pippotorre.github.io`
+3. Settings → Pages → Custom domain `leggilo.entratadisicurezza.com` (il file `public/CNAME` lo imposta già) e, quando il certificato è pronto, **Enforce HTTPS**
 
 ## Come funziona sul server
 

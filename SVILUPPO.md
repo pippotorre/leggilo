@@ -3,7 +3,7 @@
 PWA per leggere e ascoltare gli ebook della libreria Kavita del serverino, su iOS e Android.
 Qui non vanno mai scritte password, chiavi API o token.
 
-Ultimo aggiornamento: 21 novembre 2026 (prima versione).
+Ultimo aggiornamento: 22 novembre 2026 (versione 0.2: libri del telefono).
 
 ## Scelte
 
@@ -118,4 +118,22 @@ Richiesta di Pippo: un'app che legge i libri presenti sul telefono, senza dipend
 - Strade: PWA pubblica "local-first" (Kavita facoltativo); PWA su Play Store come TWA (come le altre app di Pippo); app nativa (Capacitor) per App Store, "Apri con Leggilo" su iPhone e voce a schermo bloccato.
 - Limiti PWA: su iPhone niente "Apri con" né accesso a cartelle, solo importazione con il selettore di file; su Android si può ricevere un file con "Condividi". Senza server non c'è sincronizzazione dei progressi tra dispositivi.
 
-Stato: domande aperte a Pippo (distribuzione, Kavita facoltativo, hosting pubblico, sincronizzazione).
+Risposte di Pippo (22/11): distribuzione su store e ad amici; Kavita resta facoltativo (Pippo e famiglia lo collegano); GitHub Pages con dominio `leggilo.entratadisicurezza.com`; sincronizzazione non necessaria.
+
+### Versione 0.2 (22 novembre 2026): libri del telefono + Kavita facoltativo
+
+- **Importazione:** pulsante "+" e schermata di benvenuto; selettore di file (EPUB, PDF, più file insieme). Titolo e autore dal nome del file (`Titolo (Autore) (Z-Library)`, stessa logica di `ordina_libri.py`) oppure dai metadati; copertina dall'EPUB o dalla prima pagina del PDF, ridotta a 360 px. Doppioni (stesso nome e dimensione) saltati.
+- **Archivio:** IndexedDB versione 2, archivi `locali` (scheda con copertina) e `filelocali` (file). Si chiede la memoria persistente.
+- **Scheda del libro del telefono:** leggi/continua, modifica titolo e autore, elimina.
+- **Libreria:** "Continua a leggere" con entrambe le fonti; sezioni "Sul telefono" e "Kavita" quando ci sono tutte e due; raggruppamento per autore; ricerca su entrambe.
+- **Kavita facoltativo:** schermata "Collega Kavita" (`#/kavita`) con indirizzo del server, utente e password; nella versione del serverino (build con `VITE_KAVITA_STESSA_ORIGINE=1`, impostato nel Dockerfile) l'indirizzo non si chiede. Menu: collega/scollega, aggiorna.
+- **CORS:** Kavita in produzione non manda intestazioni CORS, quindi il Caddy del serverino le aggiunge solo per l'origine pubblica (`ORIGINE_PUBBLICA`, predefinita `https://leggilo.entratadisicurezza.com`) e risponde alle richieste OPTIONS.
+- **Informazioni e privacy** (`#/info`): testo pronto anche per gli store.
+- **GitHub Pages:** workflow `pages.yml` (build e deploy a ogni push su `main`), `public/CNAME`, `public/.nojekyll`.
+- Prove automatiche (Chrome, schermo da telefono): benvenuto, importazione di EPUB e PDF, doppioni, modifica, lettura PDF ed EPUB, voce, progressi locali, informazioni, collegamento a Kavita su un altro indirizzo con CORS, apertura di un libro Kavita, eliminazione; modalità serverino senza campo indirizzo.
+
+Da fare dopo:
+- [ ] Android: ricevere i file con "Condividi → Leggilo" (Web Share Target, richiede un service worker personalizzato)
+- [ ] Play Store come TWA (skill googleplay-store)
+- [ ] App Store: serve un'app nativa (es. Capacitor) e l'account sviluppatore Apple
+- [ ] Verificare se Chrome chiede il permesso "rete locale" quando la versione pubblica chiama il server Tailscale (indirizzo 100.x)

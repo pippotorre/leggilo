@@ -19,6 +19,10 @@ export const icone = {
   cestino: s('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   libro: s('<path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM20 19v3H6"/>'),
   meno: s('<path d="M5 12h14"/>'),
+  server: s('<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>'),
+  telefono: s('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>'),
+  info: s('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
+  matita: s('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
   chiudi: s('<path d="M6 6l12 12M18 6 6 18"/>'),
   piu: s('<path d="M12 5v14M5 12h14"/>'),
 }

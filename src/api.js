@@ -1,8 +1,19 @@
-// Client delle API di Kavita (versione 0.9.1.x).
-// L'app è servita dallo stesso indirizzo di Kavita: /api viene inoltrato dal proxy.
+// Client delle API di Kavita (versione 0.9.1.x). Kavita è facoltativo.
+// Sul serverino l'app è servita dallo stesso indirizzo (/api inoltrato dal proxy);
+// nella versione pubblica l'indirizzo del server si inserisce al collegamento.
 import { leggi, scrivi } from './impostazioni.js'
 
-const BASE = '/api/'
+export const stessaOrigine = import.meta.env.VITE_KAVITA_STESSA_ORIGINE === '1'
+let server = leggi('server', stessaOrigine ? location.origin : '')
+const base = () => server.replace(/\/+$/, '') + '/api/'
+export const indirizzoServer = () => server
+
+export function normalizzaIndirizzo(url) {
+  let u = (url || '').trim()
+  if (!u) return ''
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u
+  try { return new URL(u).origin } catch { return '' }
+}
 
 export class ErroreApi extends Error {
   constructor(messaggio, stato) { super(messaggio); this.stato = stato }
@@ -19,15 +30,24 @@ function chiaveImmagini(u) {
   return u?.authKeys?.find(k => k.name === 'image-only')?.key || u?.apiKey || ''
 }
 
-export async function accedi(username, password) {
-  const r = await fetch(BASE + 'Account/login', {
+export async function accedi(indirizzo, username, password) {
+  const nuovo = stessaOrigine && !indirizzo ? location.origin : normalizzaIndirizzo(indirizzo)
+  if (!nuovo) throw new ErroreApi('Indirizzo del server non valido.', 0)
+  let r
+  try {
+    r = await fetch(nuovo + '/api/Account/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
-  })
+    })
+  } catch {
+    throw new ErroreApi('Non raggiungo il server. Controlla l\'indirizzo e, se serve, che Tailscale sia attivo.', 0)
+  }
   if (r.status === 401 || r.status === 400) throw new ErroreApi('Nome utente o password non corretti.', r.status)
   if (!r.ok) throw new ErroreApi('Il server non risponde. Riprova tra poco.', r.status)
   const u = await r.json()
+  server = nuovo
+  scrivi('server', server)
   const ruoli = u.roles || []
   salvaUtente({
     id: u.id, username: u.username, token: u.token, refreshToken: u.refreshToken,
@@ -39,13 +59,16 @@ export async function accedi(username, password) {
 
 export function esci() {
   salvaUtente(null)
+  scrivi('elenco', undefined)
 }
+
+export const collegato = () => !!(utente && server)
 
 let rinnovo = null
 async function rinnovaToken() {
   if (!utente?.refreshToken) throw new ErroreApi('Sessione scaduta', 401)
   rinnovo ??= (async () => {
-    const r = await fetch(BASE + 'Account/refresh-token', {
+    const r = await fetch(base() + 'Account/refresh-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: utente.token, refreshToken: utente.refreshToken }),
@@ -62,12 +85,12 @@ async function rinnovaToken() {
 }
 
 async function chiama(percorso, { metodo = 'GET', corpo, tipo = 'json', segnale } = {}, ripeti = true) {
-  if (!utente) throw new ErroreApi('Accesso richiesto', 401)
+  if (!utente || !server) throw new ErroreApi('Kavita non collegato', 401)
   const headers = { Authorization: `Bearer ${utente.token}` }
   if (corpo !== undefined) headers['Content-Type'] = 'application/json'
   let r
   try {
-    r = await fetch(BASE + percorso, {
+    r = await fetch(base() + percorso, {
       method: metodo, headers, signal: segnale,
       body: corpo === undefined ? undefined : JSON.stringify(corpo),
     })
@@ -87,7 +110,7 @@ async function chiama(percorso, { metodo = 'GET', corpo, tipo = 'json', segnale 
 }
 
 export const urlCopertina = seriesId =>
-  `${BASE}Image/series-cover?seriesId=${seriesId}&apiKey=${encodeURIComponent(utente?.chiaveImmagini || '')}`
+  `${base()}Image/series-cover?seriesId=${seriesId}&apiKey=${encodeURIComponent(utente?.chiaveImmagini || '')}`
 
 export async function librerie() {
   return chiama('Library/libraries')

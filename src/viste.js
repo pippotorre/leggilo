@@ -1,50 +1,85 @@
-// Schermate: accesso, libreria e scheda del libro
+// Schermate: libreria (libri del telefono e, se collegato, Kavita), collegamento a Kavita, schede dei libri
 import { h, avviso, rotella, testoSemplice } from './util.js'
 import { icone } from './icone.js'
 import * as api from './api.js'
+import * as locali from './locali.js'
 import { schedeSalvate, salvaElenco, elencoSalvato, eliminaLibro, salvaLibro, chiediSpazioPersistente } from './offline.js'
 import { applicaTema, temaAttivo } from './impostazioni.js'
 
 const FORMATI = { 3: 'EPUB', 4: 'PDF', 1: 'Archivio', 0: 'Immagini' }
 const logoUrl = './logo.svg'
+const tornaIndietro = () => (history.length > 1 ? history.back() : (location.hash = '#/'))
 
-export function vistaAccesso(app, dopo) {
+// ---------- Importazione dal telefono ----------
+
+let selettore
+export function scegliFile() {
+  selettore?.remove()
+  selettore = h('input', { type: 'file', multiple: true, accept: '.epub,.pdf,application/epub+zip,application/pdf', style: { display: 'none' } })
+  selettore.onchange = async () => {
+    const files = [...selettore.files]
+    selettore.remove()
+    if (!files.length) return
+    const box = avviso(`Importo ${files.length === 1 ? '1 libro' : files.length + ' libri'}…`, null, 0)
+    const r = await locali.importa(files, (i, n) => { box.firstChild.textContent = `Importo ${i} di ${n}…` })
+    box.remove()
+    const parti = []
+    if (r.aggiunti.length) parti.push(r.aggiunti.length === 1 ? '1 libro aggiunto' : `${r.aggiunti.length} libri aggiunti`)
+    if (r.saltati.length) parti.push(`${r.saltati.length} già presenti`)
+    if (r.errori.length) parti.push(`${r.errori.length} non importati`)
+    avviso(parti.join(', ') || 'Nessun libro importato', null, 5000)
+    if (r.errori.length) console.warn('Importazione:', r.errori)
+  }
+  document.body.append(selettore)
+  selettore.click()
+}
+
+// ---------- Collegamento a Kavita ----------
+
+export function vistaCollegaKavita(app) {
   const errore = h('div', { class: 'errore', role: 'alert' })
+  const indirizzo = h('input', { name: 'server', type: 'url', inputmode: 'url', autocapitalize: 'none', placeholder: 'https://leggilo.esempio.ts.net', value: api.indirizzoServer() && !api.stessaOrigine ? api.indirizzoServer() : '' })
   const utente = h('input', { name: 'username', autocomplete: 'username', autocapitalize: 'none', required: true, placeholder: 'pippo' })
   const password = h('input', { name: 'password', type: 'password', autocomplete: 'current-password', required: true })
-  const invia = h('button', { class: 'btn btn-primario', type: 'submit' }, 'Entra')
+  const invia = h('button', { class: 'btn btn-primario', type: 'submit' }, 'Collega')
   const form = h('form', {
     onsubmit: async e => {
       e.preventDefault()
       errore.textContent = ''
       invia.disabled = true
-      invia.textContent = 'Accesso…'
+      invia.textContent = 'Collego…'
       try {
-        await api.accedi(utente.value.trim(), password.value)
-        dopo()
+        await api.accedi(api.stessaOrigine ? '' : indirizzo.value, utente.value.trim(), password.value)
+        avviso('Kavita collegato')
+        location.hash = '#/'
       } catch (err) {
         errore.textContent = err.message
       } finally {
         invia.disabled = false
-        invia.textContent = 'Entra'
+        invia.textContent = 'Collega'
       }
     },
   },
   h('img', { class: 'logo', src: logoUrl, alt: '' }),
-  h('h1', {}, 'Leggilo'),
-  h('p', {}, 'Entra con il tuo account Kavita'),
+  h('h1', {}, 'Collega Kavita'),
+  h('p', {}, 'Facoltativo: aggiungi alla libreria i libri del tuo server Kavita.'),
+  api.stessaOrigine ? null : h('label', { class: 'campo' }, 'Indirizzo del server', indirizzo),
   h('label', { class: 'campo' }, 'Nome utente', utente),
   h('label', { class: 'campo' }, 'Password', password),
-  errore, invia)
+  errore, invia,
+  h('button', { class: 'btn', type: 'button', onclick: tornaIndietro }, 'Annulla'))
   app.replaceChildren(h('main', { class: 'login vista' }, form))
-  utente.focus()
+  ;(api.stessaOrigine ? utente : indirizzo).focus()
 }
 
-function barraPrincipale({ titolo, indietro, menu }) {
+// ---------- Barra e menu ----------
+
+function barraPrincipale({ titolo, indietro, menu, aggiungi }) {
   const b = h('header', { class: 'barra' })
   if (indietro) b.append(h('button', { class: 'btn-icona', 'aria-label': 'Indietro', html: icone.indietro, onclick: indietro }))
   if (titolo) b.append(typeof titolo === 'string' ? h('div', { class: 'titolo' }, titolo) : titolo)
   else b.append(h('h1', {}, h('img', { src: logoUrl, alt: '' }), 'Leggilo'))
+  if (aggiungi) b.append(h('button', { class: 'btn-icona', 'aria-label': 'Aggiungi libri dal telefono', title: 'Aggiungi libri', html: icone.piu, onclick: scegliFile }))
   b.append(pulsanteTema())
   if (menu) b.append(menu)
   return b
@@ -58,17 +93,22 @@ export function pulsanteTema() {
   return btn
 }
 
-function menuUtente(ricarica) {
+function menuPrincipale(ricarica) {
   const btn = h('button', { class: 'btn-icona', 'aria-label': 'Menu', 'aria-haspopup': 'true', html: icone.menu })
   btn.onclick = e => {
     e.stopPropagation()
     document.querySelector('.menu')?.remove()
     const u = api.sessione()
+    const voce = (icona, testo, fn) => h('button', { role: 'menuitem', onclick: () => { m.remove(); fn() } }, h('span', { html: icone[icona] }), testo)
     const m = h('div', { class: 'menu', role: 'menu' },
-      h('div', { class: 'info' }, `Collegato come ${u?.username}`),
-      h('button', { role: 'menuitem', onclick: () => { m.remove(); ricarica() } }, h('span', { html: icone.aggiorna }), 'Aggiorna libreria'),
-      h('button', { role: 'menuitem', onclick: () => { m.remove(); applicaTema(null); dispatchEvent(new Event('leggilo:tema')); avviso('Il tema ora segue il sistema') } }, h('span', { html: icone.sole }), 'Tema del sistema'),
-      h('button', { role: 'menuitem', onclick: () => { api.esci(); location.hash = '#/accedi' } }, h('span', { html: icone.esci }), 'Esci'),
+      api.collegato() ? h('div', { class: 'info' }, `Kavita: ${u.username}`) : null,
+      voce('piu', 'Aggiungi libri dal telefono', scegliFile),
+      api.collegato()
+        ? [voce('aggiorna', 'Aggiorna libreria Kavita', ricarica),
+          voce('esci', 'Scollega Kavita', () => { api.esci(); avviso('Kavita scollegato'); ricarica() })]
+        : voce('server', 'Collega un server Kavita', () => { location.hash = '#/kavita' }),
+      voce('sole', 'Tema del sistema', () => { applicaTema(null); dispatchEvent(new Event('leggilo:tema')); avviso('Il tema ora segue il sistema') }),
+      voce('info', 'Informazioni e privacy', () => { location.hash = '#/info' }),
     )
     document.body.append(m)
     setTimeout(() => document.addEventListener('click', () => m.remove(), { once: true }))
@@ -76,99 +116,219 @@ function menuUtente(ricarica) {
   return btn
 }
 
-function copertina(s, { salvato } = {}) {
+// ---------- Tessere dei libri ----------
+
+const urlTemporanei = new Set()
+function urlBlob(blob) {
+  const u = URL.createObjectURL(blob)
+  urlTemporanei.add(u)
+  return u
+}
+function liberaUrl() { for (const u of urlTemporanei) URL.revokeObjectURL(u); urlTemporanei.clear() }
+
+function copertina({ nome, src, avanzamento, salvato }) {
   const c = h('div', { class: 'copertina' })
-  const segnaposto = h('div', { class: 'segnaposto' }, s.name)
+  const segnaposto = h('div', { class: 'segnaposto' }, nome)
   c.append(segnaposto)
-  const img = h('img', { src: api.urlCopertina(s.id), alt: '', loading: 'lazy', decoding: 'async' })
-  img.onload = () => segnaposto.remove()
-  img.onerror = () => img.remove()
-  c.append(img)
-  if (s.pages && s.pagesRead > 0) {
-    const pct = Math.min(100, Math.round((s.pagesRead / s.pages) * 100))
-    c.append(h('div', { class: 'avanzamento' }, h('i', { style: { width: pct + '%' } })))
+  if (src) {
+    const img = h('img', { src, alt: '', loading: 'lazy', decoding: 'async' })
+    img.onload = () => segnaposto.remove()
+    img.onerror = () => img.remove()
+    c.append(img)
   }
-  if (salvato) c.append(h('div', { class: 'offline', title: 'Salvato sul dispositivo', html: icone.nuvola }))
+  if (avanzamento > 0) c.append(h('div', { class: 'avanzamento' }, h('i', { style: { width: Math.min(100, Math.round(avanzamento * 100)) + '%' } })))
+  if (salvato) c.append(h('div', { class: 'offline', title: 'Disponibile offline', html: icone.nuvola }))
   return c
 }
 
-function tessera(s, salvati) {
-  return h('button', { class: 'libro', onclick: () => { location.hash = `#/libro/${s.id}` }, 'aria-label': `${s.name}, ${s.autore}` },
-    copertina(s, { salvato: salvati.has(s.id) }),
-    h('div', { class: 'nome' }, s.name),
-    h('div', { class: 'formato' }, FORMATI[s.format] || ''))
+// Un libro, da qualunque fonte, nella forma usata dalla libreria
+const daKavita = (s, salvati) => ({
+  chiave: 'k' + s.id, fonte: 'kavita', nome: s.name, autore: s.autore, formato: s.format,
+  avanzamento: s.pages ? (s.pagesRead || 0) / s.pages : 0, ultimaLettura: s.latestReadDate ? Date.parse(s.latestReadDate) : 0,
+  src: api.urlCopertina(s.id), salvato: salvati.has(s.id), href: `#/libro/${s.id}`,
+})
+const daLocale = l => ({
+  chiave: 'l' + l.id, fonte: 'locale', nome: l.nome, autore: l.autore || 'Senza autore', formato: l.formato,
+  avanzamento: l.avanzamento || 0, ultimaLettura: l.letto || 0,
+  src: l.copertina ? urlBlob(l.copertina) : null, salvato: false, href: `#/locale/${l.id}`,
+})
+
+function tessera(b) {
+  return h('button', { class: 'libro', onclick: () => { location.hash = b.href }, 'aria-label': `${b.nome}, ${b.autore}` },
+    copertina(b),
+    h('div', { class: 'nome' }, b.nome),
+    h('div', { class: 'formato' }, FORMATI[b.formato] || ''))
 }
+
+function perAutore(libri) {
+  const gruppi = new Map()
+  for (const b of libri) {
+    if (!gruppi.has(b.autore)) gruppi.set(b.autore, [])
+    gruppi.get(b.autore).push(b)
+  }
+  return [...gruppi.entries()].sort(([a], [b]) =>
+    a === 'Senza autore' ? 1 : b === 'Senza autore' ? -1 : a.localeCompare(b, 'it', { sensitivity: 'base' }))
+}
+
+// ---------- Libreria ----------
 
 export async function vistaLibreria(app) {
   const contenuto = h('div', { class: 'contenuto' })
   const ricarica = () => carica(true)
-  app.replaceChildren(h('div', { class: 'vista' }, barraPrincipale({ menu: menuUtente(ricarica) }), contenuto))
+  app.replaceChildren(h('div', { class: 'vista' }, barraPrincipale({ menu: menuPrincipale(ricarica), aggiungi: true }), contenuto))
 
   const campo = h('input', { type: 'search', placeholder: 'Cerca titolo o autore', 'aria-label': 'Cerca', autocomplete: 'off' })
   const risultati = h('div')
-  let elenco = []
+  let kavita = []
+  let locale = []
   let salvati = new Set()
+  let caricamentoKavita = false
+
+  function sezione(titolo, conta, ...figli) {
+    return h('section', { class: 'sezione' }, h('h2', {}, titolo, conta ? h('span', { class: 'conta' }, conta) : null), ...figli)
+  }
+  const contaLibri = n => n === 1 ? '1 libro' : `${n} libri`
 
   function disegna() {
+    liberaUrl()
     const q = campo.value.trim().toLowerCase()
-    const filtrati = q ? elenco.filter(s => s.name.toLowerCase().includes(q) || s.autore.toLowerCase().includes(q)) : elenco
+    const libLocali = locale.map(daLocale)
+    const libKavita = kavita.map(s => daKavita(s, salvati))
+    const filtra = l => q ? l.filter(b => b.nome.toLowerCase().includes(q) || b.autore.toLowerCase().includes(q)) : l
     risultati.replaceChildren()
-    if (!elenco.length) {
-      risultati.append(h('div', { class: 'vuoto' }, 'La libreria è vuota. Aggiungi dei libri in Kavita e aggiornala.'))
+
+    if (!libLocali.length && !api.collegato()) {
+      risultati.append(h('div', { class: 'benvenuto' },
+        h('img', { src: logoUrl, alt: '' }),
+        h('h2', {}, 'La tua libreria è vuota'),
+        h('p', {}, 'Aggiungi i tuoi EPUB e PDF dal telefono: restano solo sul dispositivo e puoi leggerli o ascoltarli anche offline.'),
+        h('button', { class: 'btn btn-primario', onclick: scegliFile }, h('span', { html: icone.piu }), 'Aggiungi libri'),
+        h('button', { class: 'btn', onclick: () => { location.hash = '#/kavita' } }, h('span', { html: icone.server }), 'Collega un server Kavita')))
       return
     }
-    if (!filtrati.length) {
+
+    const fL = filtra(libLocali), fK = filtra(libKavita)
+    if (q && !fL.length && !fK.length) {
       risultati.append(h('div', { class: 'vuoto' }, `Nessun libro trovato per "${campo.value}".`))
       return
     }
     if (!q) {
-      const inCorso = elenco.filter(s => s.pagesRead > 0 && s.pagesRead < s.pages)
-        .sort((a, b) => (b.latestReadDate || '').localeCompare(a.latestReadDate || '')).slice(0, 12)
-      if (inCorso.length) {
-        risultati.append(h('section', { class: 'sezione' }, h('h2', {}, 'Continua a leggere'),
-          h('div', { class: 'scaffale' }, inCorso.map(s => tessera(s, salvati)))))
-      }
+      const inCorso = [...libLocali, ...libKavita].filter(b => b.avanzamento > 0 && b.avanzamento < 0.99)
+        .sort((a, b) => b.ultimaLettura - a.ultimaLettura).slice(0, 12)
+      if (inCorso.length) risultati.append(sezione('Continua a leggere', null, h('div', { class: 'scaffale' }, inCorso.map(tessera))))
     }
-    const gruppi = new Map()
-    for (const s of filtrati) {
-      if (!gruppi.has(s.autore)) gruppi.set(s.autore, [])
-      gruppi.get(s.autore).push(s)
+    const separaFonti = api.collegato() && libLocali.length
+    if (fL.length) {
+      if (separaFonti) risultati.append(h('h2', { class: 'fonte' }, h('span', { html: icone.telefono }), 'Sul telefono'))
+      for (const [autore, libri] of perAutore(fL)) risultati.append(sezione(autore, contaLibri(libri.length), h('div', { class: 'griglia' }, libri.map(tessera))))
     }
-    const autori = [...gruppi.keys()].sort((a, b) =>
-      a === 'Senza autore' ? 1 : b === 'Senza autore' ? -1 : a.localeCompare(b, 'it', { sensitivity: 'base' }))
-    for (const a of autori) {
-      const libri = gruppi.get(a)
-      risultati.append(h('section', { class: 'sezione' },
-        h('h2', {}, a, h('span', { class: 'conta' }, libri.length === 1 ? '1 libro' : `${libri.length} libri`)),
-        h('div', { class: 'griglia' }, libri.map(s => tessera(s, salvati)))))
+    if (api.collegato()) {
+      if (separaFonti && (fK.length || caricamentoKavita)) risultati.append(h('h2', { class: 'fonte' }, h('span', { html: icone.server }), 'Kavita'))
+      if (caricamentoKavita && !kavita.length) risultati.append(rotella('Carico la libreria di Kavita…'))
+      for (const [autore, libri] of perAutore(fK)) risultati.append(sezione(autore, contaLibri(libri.length), h('div', { class: 'griglia' }, libri.map(tessera))))
     }
   }
 
+  async function caricaLocali() {
+    locale = await locali.tutti()
+    disegna()
+  }
+
   async function carica(forza) {
+    await caricaLocali()
+    if (!api.collegato()) { kavita = []; disegna(); return }
     salvati = new Set((await schedeSalvate()).map(s => s.seriesId))
     const cache = elencoSalvato()
-    if (cache && !forza) { elenco = cache; disegna() }
-    else if (!cache) risultati.replaceChildren(rotella('Carico la libreria…'))
+    if (cache && !forza) { kavita = cache; disegna() }
+    caricamentoKavita = true
+    disegna()
     try {
       const serie = await api.tutteLeSerie()
-      elenco = (serie || []).map(s => ({
+      kavita = (serie || []).map(s => ({
         id: s.id, name: s.name, sortName: s.sortName, format: s.format, pages: s.pages, pagesRead: s.pagesRead,
         latestReadDate: s.latestReadDate, libraryId: s.libraryId, autore: api.autoreDaCartella(s),
       }))
-      salvaElenco(elenco)
-      disegna()
+      salvaElenco(kavita)
       if (forza) avviso('Libreria aggiornata')
     } catch (e) {
-      if (e.stato === 401) return
-      if (!elenco.length) risultati.replaceChildren(h('div', { class: 'vuoto' }, e.message))
-      else avviso('Sei offline: vedi l\'ultima libreria salvata')
+      if (e.stato !== 401) avviso(kavita.length ? 'Kavita non raggiungibile: vedi l\'ultima libreria salvata' : e.message, null, 5000)
     }
+    caricamentoKavita = false
+    disegna()
   }
 
   campo.addEventListener('input', disegna)
   contenuto.append(h('label', { class: 'cerca' }, h('span', { html: icone.cerca }), campo), risultati)
-  addEventListener('leggilo:offline-cambiato', () => carica(false), { once: true })
+  const suLocali = () => { if (document.body.contains(risultati)) caricaLocali() }
+  addEventListener('leggilo:locali-cambiati', suLocali)
   await carica(false)
+}
+
+// ---------- Scheda di un libro del telefono ----------
+
+export async function vistaLibroLocale(app, id) {
+  const contenuto = h('div', { class: 'contenuto' }, rotella())
+  app.replaceChildren(h('div', { class: 'vista' }, barraPrincipale({ titolo: ' ', indietro: tornaIndietro }), contenuto))
+  const l = await locali.scheda(id)
+  if (!l) { contenuto.replaceChildren(h('div', { class: 'vuoto' }, 'Questo libro non è più sul dispositivo.')); return }
+  liberaUrl()
+  const b = daLocale(l)
+  const pct = Math.round((l.avanzamento || 0) * 100)
+  const titolo = h('h2', {}, l.nome)
+  const autore = h('div', { class: 'autore' }, l.autore || 'Senza autore')
+  const peso = l.byte < 1048576 ? `${Math.max(1, Math.round(l.byte / 1024))} KB` : `${(l.byte / 1048576).toFixed(1)} MB`
+
+  const modifica = () => {
+    const t = h('input', { value: l.nome, 'aria-label': 'Titolo' })
+    const a = h('input', { value: l.autore || '', 'aria-label': 'Autore' })
+    const form = h('form', { class: 'modifica', onsubmit: async e => {
+      e.preventDefault()
+      l.nome = t.value.trim() || l.nome
+      l.autore = a.value.trim() || 'Senza autore'
+      await locali.aggiorna(id, { nome: l.nome, autore: l.autore })
+      titolo.textContent = l.nome; autore.textContent = l.autore
+      form.replaceWith(azioni)
+      avviso('Salvato')
+    } },
+    h('label', { class: 'campo' }, 'Titolo', t), h('label', { class: 'campo' }, 'Autore', a),
+    h('div', { class: 'azioni' }, h('button', { class: 'btn btn-primario', type: 'submit' }, 'Salva'), h('button', { class: 'btn', type: 'button', onclick: () => form.replaceWith(azioni) }, 'Annulla')))
+    azioni.replaceWith(form)
+    t.focus()
+  }
+  const azioni = h('div', { class: 'azioni' },
+    h('button', { class: 'btn btn-primario', onclick: () => { location.hash = `#/leggi-locale/${id}` } }, h('span', { html: icone.libro }), pct > 0 && pct < 99 ? 'Continua' : 'Leggi'),
+    h('button', { class: 'btn', onclick: modifica }, h('span', { html: icone.matita }), 'Modifica'),
+    h('button', { class: 'btn', onclick: async () => {
+      if (!confirm(`Eliminare "${l.nome}" dal telefono?`)) return
+      await locali.elimina(id)
+      avviso('Libro eliminato')
+      location.hash = '#/'
+    } }, h('span', { html: icone.cestino }), 'Elimina'))
+
+  contenuto.replaceChildren(h('div', { class: 'scheda' },
+    h('div', {}, copertina({ ...b, avanzamento: 0 })),
+    h('div', {},
+      titolo, autore,
+      pct > 0 ? h('div', {}, h('div', { class: 'barra-avanzamento' }, h('i', { style: { width: pct + '%' } })), h('div', { class: 'piccolo', style: { marginTop: '6px' } }, pct >= 99 ? 'Letto' : `Letto al ${pct}%`)) : null,
+      azioni,
+      h('div', { class: 'piccolo' }, [FORMATI[l.formato], peso, 'sul telefono'].join(' · ')),
+      h('div', { class: 'piccolo', style: { marginTop: '4px', wordBreak: 'break-all' } }, l.nomeFile))))
+}
+
+// ---------- Informazioni e privacy ----------
+
+export function vistaInfo(app) {
+  const versione = import.meta.env.VITE_VERSIONE || 'sviluppo'
+  app.replaceChildren(h('div', { class: 'vista' }, barraPrincipale({ titolo: 'Informazioni', indietro: tornaIndietro }),
+    h('div', { class: 'contenuto testo-info' },
+      h('img', { class: 'logo-grande', src: logoUrl, alt: '' }),
+      h('h2', {}, 'Leggilo'),
+      h('p', {}, 'Leggi e ascolta i tuoi ebook EPUB e PDF. Versione ' + versione + '.'),
+      h('h3', {}, 'Privacy'),
+      h('p', {}, 'Leggilo non raccoglie dati personali, non usa pubblicità né strumenti di analisi e non ha un proprio server.'),
+      h('p', {}, 'I libri che aggiungi dal telefono, la posizione di lettura e le impostazioni restano solo sul dispositivo. La lettura ad alta voce usa le voci installate sul dispositivo.'),
+      h('p', {}, 'Se colleghi un server Kavita, Leggilo comunica solo con quel server, con le credenziali che inserisci, per mostrare i tuoi libri e salvare la posizione di lettura.'),
+      h('p', {}, 'Puoi cancellare tutto eliminando i libri dall\'app o disinstallandola.'))))
 }
 
 // Capitoli (file) di una serie, dal più vecchio
@@ -180,7 +340,7 @@ export async function capitoliDi(seriesId) {
 
 export async function vistaLibro(app, seriesId) {
   const contenuto = h('div', { class: 'contenuto' }, rotella())
-  app.replaceChildren(h('div', { class: 'vista' }, barraPrincipale({ titolo: ' ', indietro: () => history.length > 1 ? history.back() : (location.hash = '#/') }), contenuto))
+  app.replaceChildren(h('div', { class: 'vista' }, barraPrincipale({ titolo: ' ', indietro: tornaIndietro }), contenuto))
 
   const dalElenco = (elencoSalvato() || []).find(s => s.id === seriesId)
   let s, capitoli, meta
@@ -235,7 +395,7 @@ export async function vistaLibro(app, seriesId) {
   const riassunto = testoSemplice(meta?.summary)
 
   contenuto.replaceChildren(h('div', { class: 'scheda' },
-    h('div', {}, copertina(s)),
+    h('div', {}, copertina({ nome: s.name, src: api.urlCopertina(s.id) })),
     h('div', {},
       h('h2', {}, s.name),
       h('div', { class: 'autore' }, autore),

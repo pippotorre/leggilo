@@ -15,8 +15,12 @@ export function h(tag, attrs = {}, ...figli) {
 
 export function avviso(testo, azione, durata = 4000) {
   const box = document.getElementById('avvisi')
+  // Al massimo due avvisi visibili: si toglie il più vecchio che non è "fisso"
+  const vecchi = [...box.children].filter(e => !e.dataset.fisso)
+  if (box.children.length >= 2 && vecchi.length) vecchi[0].remove()
   const el = h('div', { class: 'avviso', role: 'status' }, h('span', {}, testo))
   if (azione) el.append(h('button', { onclick: () => { el.remove(); azione.fn() } }, azione.testo))
+  if (!durata) el.dataset.fisso = '1'
   box.append(el)
   if (durata) setTimeout(() => el.remove(), durata)
   return el
