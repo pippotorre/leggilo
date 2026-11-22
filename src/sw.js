@@ -21,6 +21,12 @@ registerRoute(
   }),
 )
 
+// Motore delle voci di Leggilo (WebAssembly e dati espeak): scaricato al primo uso, poi dalla cache
+registerRoute(
+  ({ url }) => url.pathname.includes('/vendor/'),
+  new CacheFirst({ cacheName: 'leggilo-motore-voci', plugins: [new CacheableResponsePlugin({ statuses: [200] })] }),
+)
+
 // Altri dati di Kavita in lettura: prima la rete, poi la cache
 registerRoute(
   ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET'

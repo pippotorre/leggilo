@@ -8,7 +8,7 @@ App (PWA) per leggere e ascoltare ebook EPUB e PDF, da iPhone, Android e compute
 - Libreria per autore con ricerca e "Continua a leggere"
 - Lettore EPUB (foliate-js) con dimensione del testo, interlinea, margini e tema carta/notte
 - Lettore PDF (pdf.js)
-- Lettura ad alta voce con le voci del dispositivo, frase evidenziata, velocità e voce regolabili
+- Lettura ad alta voce con le voci del dispositivo o con le **voci di Leggilo** (Paola, Serena, Riccardo: voci neurali Piper che si scaricano una volta e funzionano offline), frase evidenziata, velocità e voce regolabili
 - Libri salvati sul dispositivo per la lettura offline
 - Installabile come app e utilizzabile offline
 

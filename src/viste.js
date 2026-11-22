@@ -5,6 +5,8 @@ import * as api from './api.js'
 import * as locali from './locali.js'
 import { schedeSalvate, salvaElenco, elencoSalvato, eliminaLibro, salvaLibro, chiediSpazioPersistente } from './offline.js'
 import { applicaTema, temaAttivo } from './impostazioni.js'
+import { VOCI_LEGGILO } from './voci-leggilo.js'
+import { pannelloVoci } from './voci-ui.js'
 
 const FORMATI = { 3: 'EPUB', 4: 'PDF', 1: 'Archivio', 0: 'Immagini' }
 const logoUrl = './logo.svg'
@@ -107,6 +109,7 @@ function menuPrincipale(ricarica) {
         ? [voce('aggiorna', 'Aggiorna libreria Kavita', ricarica),
           voce('esci', 'Scollega Kavita', () => { api.esci(); avviso('Kavita scollegato'); ricarica() })]
         : voce('server', 'Collega un server Kavita', () => { location.hash = '#/kavita' }),
+      voce('play', 'Voci di Leggilo', () => pannelloVoci()),
       voce('sole', 'Tema del sistema', () => { applicaTema(null); dispatchEvent(new Event('leggilo:tema')); avviso('Il tema ora segue il sistema') }),
       voce('info', 'Informazioni e privacy', () => { location.hash = '#/info' }),
     )
@@ -328,7 +331,10 @@ export function vistaInfo(app) {
       h('p', {}, 'Leggilo non raccoglie dati personali, non usa pubblicità né strumenti di analisi e non ha un proprio server.'),
       h('p', {}, 'I libri che aggiungi dal telefono, la posizione di lettura e le impostazioni restano solo sul dispositivo. La lettura ad alta voce usa le voci installate sul dispositivo.'),
       h('p', {}, 'Se colleghi un server Kavita, Leggilo comunica solo con quel server, con le credenziali che inserisci, per mostrare i tuoi libri e salvare la posizione di lettura.'),
-      h('p', {}, 'Puoi cancellare tutto eliminando i libri dall\'app o disinstallandola.'))))
+      h('p', {}, 'Puoi cancellare tutto eliminando i libri dall\'app o disinstallandola.'),
+      h('h3', {}, 'Voci di Leggilo'),
+      h('p', {}, 'Le voci si scaricano da Hugging Face solo quando le scegli e poi funzionano sul dispositivo. Motore: Piper (MIT), espeak-ng (GPL-3.0) e ONNX Runtime (MIT).'),
+      VOCI_LEGGILO.map(v => h('p', {}, `${v.nome}: ${v.crediti}`)))))
 }
 
 // Capitoli (file) di una serie, dal più vecchio

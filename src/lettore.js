@@ -1,5 +1,6 @@
 // Schermata di lettura: EPUB o PDF, progressi, impostazioni e lettura ad alta voce
-import { h, avviso, rotella, debounce } from './util.js'
+import { h, avviso, rotella, debounce, apriPannello } from './util.js'
+import { pannelloVoci, gruppoVociLeggilo } from './voci-ui.js'
 import { icone } from './icone.js'
 import * as api from './api.js'
 import { fileLibro, schedaSalvata, salvaLibro, inviaProgresso, posizioneLocale, salvaPosizioneLocale, chiediSpazioPersistente } from './offline.js'
@@ -9,7 +10,7 @@ import { capitoliDi } from './viste.js'
 import { coloriTema } from './temi.js'
 import * as locali from './locali.js'
 
-const lettoreVoce = voceDisponibile ? new Lettore() : null
+const lettoreVoce = new Lettore()
 let chiusuraCorrente = null
 
 export function chiudiLettore() {
@@ -53,7 +54,7 @@ export async function vistaLettore(app, sorgente) {
       h('button', { class: 'btn-libreria', 'aria-label': 'Torna alla libreria', onclick: () => esci() }, h('span', { html: icone.indietro }), 'Libreria'),
       titolo, btnIndice, btnTesto),
     pagina, fraseBox,
-    h('footer', { class: 'piede' }, btnPrima, stato, voceDisponibile ? btnAscolta : null, btnDopo))
+    h('footer', { class: 'piede' }, btnPrima, stato, btnAscolta, btnDopo))
   app.replaceChildren(radice)
 
   let scheda, controller, ultimaPosizione
@@ -147,29 +148,32 @@ export async function vistaLettore(app, sorgente) {
     return
   }
 
-  btnPrima.onclick = () => lettoreVoce?.attivo ? lettoreVoce.indietro() : controller.indietro()
-  btnDopo.onclick = () => lettoreVoce?.attivo ? lettoreVoce.avanti() : controller.avanti()
+  btnPrima.onclick = () => lettoreVoce.attivo ? lettoreVoce.indietro() : controller.indietro()
+  btnDopo.onclick = () => lettoreVoce.attivo ? lettoreVoce.avanti() : controller.avanti()
 
   // Lettura ad alta voce
   const aggiornaAscolta = () => {
-    const attivo = lettoreVoce?.attivo
+    const attivo = lettoreVoce.attivo
     btnAscolta.classList.toggle('attivo', !!attivo)
     btnAscolta.firstChild.innerHTML = attivo ? icone.pausa : icone.play
-    btnAscolta.lastChild.textContent = attivo ? 'Pausa' : (lettoreVoce?.inPausa ? 'Riprendi' : 'Ascolta')
+    btnAscolta.lastChild.textContent = attivo ? 'Pausa' : (lettoreVoce.inPausa ? 'Riprendi' : 'Ascolta')
     btnPrima.setAttribute('aria-label', attivo ? 'Frase precedente' : 'Pagina precedente')
     btnDopo.setAttribute('aria-label', attivo ? 'Frase successiva' : 'Pagina successiva')
-    if (!attivo && !lettoreVoce?.inPausa) { fraseBox.hidden = true; controller?.togliEvidenza() }
+    if (!attivo && !lettoreVoce.inPausa) { fraseBox.hidden = true; controller?.togliEvidenza() }
   }
   const suFrase = e => {
     controller.evidenziaFrase(e.detail)
     if (controller.tipo === 'pdf') { fraseBox.hidden = false; fraseBox.textContent = e.detail.testo }
   }
   const suFine = () => avviso('Fine del libro')
+  const suErrore = e => avviso(e.detail, null, 6000)
   if (lettoreVoce) {
     lettoreVoce.addEventListener('stato', aggiornaAscolta)
     lettoreVoce.addEventListener('frase', suFrase)
     lettoreVoce.addEventListener('fine', suFine)
+    lettoreVoce.addEventListener('errore', suErrore)
     btnAscolta.onclick = async () => {
+      lettoreVoce.sblocca()
       if (lettoreVoce.attivo) return lettoreVoce.pausa()
       if (lettoreVoce.inPausa) return lettoreVoce.riprendi()
       if (controller.haTesto && !(await controller.haTesto())) {
@@ -193,25 +197,12 @@ export async function vistaLettore(app, sorgente) {
       lettoreVoce.removeEventListener('stato', aggiornaAscolta)
       lettoreVoce.removeEventListener('frase', suFrase)
       lettoreVoce.removeEventListener('fine', suFine)
+      lettoreVoce.removeEventListener('errore', suErrore)
     }
     removeEventListener('leggilo:tema', suTema)
     controller?.chiudi()
     document.title = 'Leggilo'
   }
-}
-
-function apriPannello(...contenuto) {
-  const velo = h('div', { class: 'velo' })
-  const chiudi = () => { velo.remove(); pannello.remove(); document.removeEventListener('keydown', esc) }
-  const esc = e => { if (e.key === 'Escape') chiudi() }
-  const pannello = h('div', { class: 'pannello', role: 'dialog', 'aria-modal': 'true' },
-    h('div', { class: 'maniglia' }),
-    h('button', { class: 'btn-icona chiudi-pannello', 'aria-label': 'Chiudi', html: icone.chiudi, onclick: () => chiudi() }),
-    ...contenuto)
-  velo.onclick = chiudi
-  document.addEventListener('keydown', esc)
-  document.body.append(velo, pannello)
-  return chiudi
 }
 
 function scelte(opzioni, valore, onScegli) {
@@ -248,23 +239,31 @@ async function pannelloImpostazioni(controller, imp) {
   }
   sezioni.push(h('h3', {}, 'Tema'), scelte([['chiaro', 'Carta'], ['scuro', 'Notte']], temaAttivo(), v => { applicaTema(v); dispatchEvent(new Event('leggilo:tema')) }))
 
-  if (voceDisponibile) {
-    const voci = await elencoVoci()
+  {
+    const voci = voceDisponibile ? await elencoVoci() : []
     const pref = preferenzeVoce()
     const lingua = (controller.lingua || 'it').slice(0, 2).toLowerCase()
     const ordinate = [...voci].sort((a, b) => {
       const pa = a.lang?.toLowerCase().startsWith(lingua) ? 0 : 1, pb = b.lang?.toLowerCase().startsWith(lingua) ? 0 : 1
       return pa - pb || a.name.localeCompare(b.name)
     })
-    const sel = h('select', { 'aria-label': 'Voce' },
-      h('option', { value: '' }, 'Automatica'),
-      ordinate.map(v => h('option', { value: v.voiceURI, selected: v.voiceURI === pref.voce }, `${v.name} (${v.lang})`)))
-    sel.onchange = () => { salvaPreferenzeVoce({ voce: sel.value }); lettoreVoce?.cambiaVoce() }
+    const sel = h('select', { 'aria-label': 'Voce' })
+    const riempi = async () => {
+      const p = preferenzeVoce()
+      sel.replaceChildren(
+        h('option', { value: '' }, 'Automatica'),
+        await gruppoVociLeggilo(p.voce),
+        ordinate.length ? h('optgroup', { label: 'Voci del telefono' },
+          ordinate.map(v => h('option', { value: v.voiceURI, selected: v.voiceURI === p.voce }, `${v.name} (${v.lang})`))) : null)
+    }
+    await riempi()
+    sel.onchange = () => { salvaPreferenzeVoce({ voce: sel.value }); lettoreVoce.cambiaVoce() }
+    const gestisci = h('button', { class: 'btn', onclick: () => pannelloVoci(async () => { await riempi(); lettoreVoce.cambiaVoce() }) }, h('span', { html: icone.scarica }), 'Voci di Leggilo')
     const etVel = h('span', { class: 'piccolo', style: { minWidth: '44px', textAlign: 'right' } }, pref.velocita.toFixed(1) + '×')
     const vel = h('input', { type: 'range', min: 0.6, max: 2, step: 0.1, value: pref.velocita, 'aria-label': 'Velocità di lettura' })
     vel.oninput = () => { etVel.textContent = (+vel.value).toFixed(1) + '×' }
-    vel.onchange = () => { salvaPreferenzeVoce({ velocita: +vel.value }); lettoreVoce?.cambiaVoce() }
-    sezioni.push(h('h3', {}, 'Voce'), h('div', { class: 'riga' }, sel),
+    vel.onchange = () => { salvaPreferenzeVoce({ velocita: +vel.value }); lettoreVoce.cambiaVoce() }
+    sezioni.push(h('h3', {}, 'Voce'), h('div', { class: 'riga' }, sel), h('div', { class: 'riga' }, gestisci),
       h('h3', {}, 'Velocità della voce'), h('div', { class: 'riga' }, vel, etVel))
   }
   apriPannello(...sezioni)

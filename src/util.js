@@ -1,4 +1,5 @@
 // Piccole utilità per costruire l'interfaccia
+import { icone } from './icone.js'
 export function h(tag, attrs = {}, ...figli) {
   const el = document.createElement(tag)
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -39,4 +40,18 @@ export function rotella(testo = 'Carico…') {
 export function testoSemplice(html) {
   const d = new DOMParser().parseFromString(html || '', 'text/html')
   return d.body.textContent || ''
+}
+
+export function apriPannello(...contenuto) {
+  const velo = h('div', { class: 'velo' })
+  const chiudi = () => { velo.remove(); pannello.remove(); document.removeEventListener('keydown', esc) }
+  const esc = e => { if (e.key === 'Escape') chiudi() }
+  const pannello = h('div', { class: 'pannello', role: 'dialog', 'aria-modal': 'true' },
+    h('div', { class: 'maniglia' }),
+    h('button', { class: 'btn-icona chiudi-pannello', 'aria-label': 'Chiudi', html: icone.chiudi, onclick: () => chiudi() }),
+    ...contenuto)
+  velo.onclick = chiudi
+  document.addEventListener('keydown', esc)
+  document.body.append(velo, pannello)
+  return chiudi
 }

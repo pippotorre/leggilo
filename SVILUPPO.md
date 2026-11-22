@@ -3,7 +3,7 @@
 PWA per leggere e ascoltare gli ebook della libreria Kavita del serverino, su iOS e Android.
 Qui non vanno mai scritte password, chiavi API o token.
 
-Ultimo aggiornamento: 22 novembre 2026 (versione 0.3: Condividi → Leggilo).
+Ultimo aggiornamento: 22 novembre 2026 (versione 0.4: voci di Leggilo).
 
 ## Scelte
 
@@ -172,4 +172,14 @@ Richiesta di Pippo: oltre alle voci del telefono, voci scelte dall'app: italiano
 - **Accento siciliano:** non risultano voci pronte. Serve registrare due persone siciliane (uomo e donna) che leggono circa 1000 frasi in italiano (2–3 ore ciascuna, con Piper Recording Studio) e dare il consenso scritto alla distribuzione della voce; poi addestramento a partire da un modello italiano su una GPU (qualche ora, costo di qualche decina di euro). Non si imitano voci di persone senza consenso.
 - **Limiti:** la generazione sul telefono è più lenta della voce di sistema e consuma più batteria; la qualità media su telefoni vecchi va provata.
 
-Stato: domande aperte a Pippo.
+Decisione di Pippo (22/11): partire con Paola, Serena e Riccardo, oltre alle voci del telefono.
+
+### Versione 0.4 (22 novembre 2026): voci di Leggilo
+
+- **Catalogo** (`src/voci-leggilo.js`): Paola (`it_IT-paola-medium`, 63 MB), Serena (`it_IT-serena-high`, 114 MB), Riccardo (`it_IT-riccardo-x_low`, 28 MB). Modelli scaricati da Hugging Face solo su richiesta e salvati in Cache Storage (`leggilo-voci`); si possono provare ed eliminare.
+- **Motore** (`src/piper-worker.js`, Web Worker): fonemi con espeak-ng compilato in WebAssembly (`@diffusionstudio/piper-wasm`, dati 18 MB) e modello con ONNX Runtime Web 1.23 (WASM, un thread perché GitHub Pages non permette l'isolamento cross-origin). I fonemi si convertono con la `phoneme_id_map` di ogni voce (le voci Piper 1.5 hanno una mappa diversa dalle vecchie). File binari in `public/vendor/` copiati da `scripts/copia-vendor.mjs` (non nel repository), scaricati al primo uso e poi in cache dal service worker.
+- **Riproduzione:** elemento `<audio>` con file WAV per frase; si preparano 2 frasi in anticipo; la velocità agisce sulla durata della sintesi (`length_scale`), non sul tono. Lo sblocco dell'audio avviene al tocco su "Ascolta" (necessario su iPhone). Con l'audio "vero" la lettura potrebbe continuare a schermo bloccato: da verificare sui telefoni.
+- **Interfaccia:** pannello "Voci di Leggilo" dal menu e da Aa → Voce; nel selettore delle voci i gruppi "Voci di Leggilo" e "Voci del telefono"; crediti e licenze in Informazioni.
+- **Misure (CPU del server di prova, un thread):** Paola circa 2 s per 4 s di audio, Riccardo 0,8 s per 4 s, Serena 8,7 s per 4,5 s → Serena è più lenta del parlato e farà pause tra le frasi. Primo uso: 3–9 s per caricare il modello.
+- Verificato in Chrome: download con avanzamento, prova della voce, lettura continua di un EPUB (pause tra le frasi intorno a 0,1 s con Paola), scelta salvata.
+- **Licenze:** Paola MIT (dati CC0), Riccardo MIT (dati M-AILABS), Serena CC BY 4.0 (attribuzione in Informazioni). espeak-ng, incluso nel fonemizzatore, è GPL-3.0: per distribuire l'app conviene pubblicare Leggilo con licenza GPL-3.0 (decisione da prendere).

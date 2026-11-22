@@ -1,6 +1,7 @@
 // Lettura ad alta voce con le voci del dispositivo (Web Speech API).
 // Si legge una frase alla volta: è più affidabile su iOS e Android e permette di evidenziare la frase.
 import { leggi, scrivi, predefiniteVoce } from './impostazioni.js'
+import { PREFISSO, voceLeggilo, voceScaricata, sintetizza } from './voci-leggilo.js'
 
 const sintesi = window.speechSynthesis
 export const voceDisponibile = !!sintesi && typeof SpeechSynthesisUtterance !== 'undefined'
@@ -20,8 +21,13 @@ export const salvaPreferenzeVoce = p => scrivi('voce', { ...preferenzeVoce(), ..
 
 // Sceglie la voce: quella salvata, altrimenti la migliore per la lingua del libro
 export async function scegliVoce(lingua = 'it') {
-  const voci = await elencoVoci()
   const { voce } = preferenzeVoce()
+  // Voce di Leggilo (italiana): solo per i libri in italiano e se è già scaricata
+  if (voce?.startsWith(PREFISSO) && (lingua || 'it').toLowerCase().startsWith('it')) {
+    const v = voceLeggilo(voce)
+    if (v && await voceScaricata(v)) return { leggilo: v, name: v.nome, lang: 'it-IT' }
+  }
+  const voci = await elencoVoci()
   const l = (lingua || 'it').toLowerCase().slice(0, 2)
   const stessaLingua = v => v.lang?.toLowerCase().replace('_', '-').startsWith(l)
   const salvata = voci.find(v => v.voiceURI === voce)
@@ -86,9 +92,63 @@ export class Lettore extends EventTarget {
     this.generazione = 0
     this.voce = null
     this.lingua = 'it'
+    this.preparati = new Map()
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && this.attivo) tieniSchermoAcceso(true)
     })
+  }
+
+  // Da chiamare subito dentro il tocco dell'utente: su iPhone l'audio parte solo così
+  sblocca() {
+    this.audio ??= new Audio()
+    this.audio.setAttribute('playsinline', '')
+    if (!this.audioSbloccato) {
+      this.audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+      this.audio.play().then(() => { this.audioSbloccato = true }).catch(() => {})
+    }
+  }
+
+  #sintesi(i) {
+    const seg = this.segmenti[i]
+    if (!seg || !this.voce?.leggilo) return null
+    if (!this.preparati.has(i)) {
+      const { velocita } = preferenzeVoce()
+      const p = sintetizza(this.voce.leggilo, seg.testo, velocita)
+      p.catch(() => {})
+      this.preparati.set(i, p)
+    }
+    return this.preparati.get(i)
+  }
+
+  async #parlaLeggilo(seg) {
+    const gen = this.generazione
+    let blob
+    try {
+      const attuale = this.#sintesi(this.indice)
+      this.#sintesi(this.indice + 1)
+      this.#sintesi(this.indice + 2)
+      blob = await attuale
+    } catch (e) {
+      if (gen !== this.generazione) return
+      this.ferma()
+      this.#emetti('errore', 'La voce di Leggilo non funziona su questo dispositivo: scegli una voce del telefono.')
+      return
+    }
+    if (gen !== this.generazione || !this.attivo) return
+    const url = URL.createObjectURL(blob)
+    this.audio.src = url
+    this.audio.playbackRate = 1
+    this.audio.onended = () => {
+      URL.revokeObjectURL(url)
+      if (gen !== this.generazione || !this.attivo) return
+      this.preparati.delete(this.indice)
+      this.indice++
+      this.#parla()
+    }
+    this.#emetti('frase', seg)
+    try { await this.audio.play() } catch {
+      if (gen === this.generazione) { this.pausa(); this.#emetti('errore', 'Tocca Riprendi per avviare l\'audio.') }
+    }
   }
 
   async avvia(sorgente, { lingua, titolo, autore } = {}) {
@@ -109,6 +169,7 @@ export class Lettore extends EventTarget {
     if (gen !== this.generazione || !this.attivo) return
     if (!b) { this.ferma(); this.#emetti('fine'); return }
     this.segmenti = b.segmenti.filter(s => s.testo.trim())
+    this.preparati = new Map()
     this.indice = 0
     if (!this.segmenti.length) return this.#caricaBlocco()
     this.#parla()
@@ -118,6 +179,7 @@ export class Lettore extends EventTarget {
     const gen = this.generazione
     const seg = this.segmenti[this.indice]
     if (!seg) return this.#caricaBlocco()
+    if (this.voce?.leggilo) return this.#parlaLeggilo(seg)
     const { velocita } = preferenzeVoce()
     const u = new SpeechSynthesisUtterance(seg.testo)
     if (this.voce) { u.voice = this.voce; u.lang = this.voce.lang } else u.lang = this.lingua
@@ -144,7 +206,8 @@ export class Lettore extends EventTarget {
     this.generazione++
     this.attivo = false
     this.inPausa = true
-    sintesi.cancel()
+    if (voceDisponibile) sintesi.cancel()
+    this.audio?.pause()
     tieniSchermoAcceso(false)
     this.#emetti('stato')
   }
@@ -162,7 +225,8 @@ export class Lettore extends EventTarget {
   avanti() {
     if (!this.sorgente) return
     this.generazione++
-    sintesi.cancel()
+    if (voceDisponibile) sintesi.cancel()
+    this.audio?.pause()
     this.indice++
     if (this.attivo) this.#parla()
   }
@@ -170,14 +234,16 @@ export class Lettore extends EventTarget {
   indietro() {
     if (!this.sorgente) return
     this.generazione++
-    sintesi.cancel()
+    if (voceDisponibile) sintesi.cancel()
+    this.audio?.pause()
     this.indice = Math.max(0, this.indice - 1)
     if (this.attivo) this.#parla()
   }
 
   async cambiaVoce() {
     this.voce = await scegliVoce(this.lingua)
-    if (this.attivo) { this.generazione++; sintesi.cancel(); this.#parla() }
+    this.preparati = new Map()
+    if (this.attivo) { this.generazione++; if (voceDisponibile) sintesi.cancel(); this.audio?.pause(); this.#parla() }
   }
 
   ferma() {
@@ -186,7 +252,9 @@ export class Lettore extends EventTarget {
     this.attivo = false
     this.inPausa = false
     this.segmenti = []
+    this.preparati = new Map()
     if (voceDisponibile) sintesi.cancel()
+    this.audio?.pause()
     tieniSchermoAcceso(false)
     if (eraAttivo) this.#emetti('stato')
   }
