@@ -8,7 +8,7 @@ import { applicaTema, temaAttivo } from './impostazioni.js'
 
 const FORMATI = { 3: 'EPUB', 4: 'PDF', 1: 'Archivio', 0: 'Immagini' }
 const logoUrl = './logo.svg'
-const tornaIndietro = () => (history.length > 1 ? history.back() : (location.hash = '#/'))
+const tornaIndietro = () => { location.hash = '#/' }
 
 // ---------- Importazione dal telefono ----------
 
@@ -76,7 +76,7 @@ export function vistaCollegaKavita(app) {
 
 function barraPrincipale({ titolo, indietro, menu, aggiungi }) {
   const b = h('header', { class: 'barra' })
-  if (indietro) b.append(h('button', { class: 'btn-icona', 'aria-label': 'Indietro', html: icone.indietro, onclick: indietro }))
+  if (indietro) b.append(h('button', { class: 'btn-libreria', 'aria-label': 'Torna alla libreria', onclick: indietro }, h('span', { html: icone.indietro }), 'Libreria'))
   if (titolo) b.append(typeof titolo === 'string' ? h('div', { class: 'titolo' }, titolo) : titolo)
   else b.append(h('h1', {}, h('img', { src: logoUrl, alt: '' }), 'Leggilo'))
   if (aggiungi) b.append(h('button', { class: 'btn-icona', 'aria-label': 'Aggiungi libri dal telefono', title: 'Aggiungi libri', html: icone.piu, onclick: scegliFile }))

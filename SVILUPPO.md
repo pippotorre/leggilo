@@ -155,3 +155,9 @@ Decisione di Pippo (22/11): partire subito con Condividi; "Apri con" quando si p
 - [ ] Play Store come TWA (skill googleplay-store)
 - [ ] App Store: serve un'app nativa (es. Capacitor) e l'account sviluppatore Apple
 - [ ] Verificare se Chrome chiede il permesso "rete locale" quando la versione pubblica chiama il server Tailscale (indirizzo 100.x)
+
+### Versione 0.3.1 (22 novembre 2026): ritorno alla libreria più chiaro
+
+Segnalazione di Pippo: aperto un libro non era chiaro come tornare a tutti i libri.
+- Nel lettore e nelle schede il pulsante in alto a sinistra è ora "← Libreria" (con testo) e porta sempre alla libreria, non più alla scheda del libro.
+- La prima volta che si nascondono i comandi toccando il centro della pagina compare un suggerimento: "Tocca di nuovo al centro della pagina per i comandi e per tornare alla libreria".

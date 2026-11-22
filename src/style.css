@@ -280,3 +280,13 @@ h2.fonte svg { width: 20px; height: 20px; color: var(--color-primary); }
 .testo-info h2 { margin: 0; }
 .testo-info h3 { margin: 24px 0 6px; font-size: 16px; }
 .testo-info p { color: var(--color-text-soft); margin: 0 0 10px; line-height: 1.6; }
+
+/* Ritorno alla libreria */
+.btn-libreria {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 14px 0 6px; flex-shrink: 0;
+  border: none; border-radius: 999px; background: var(--color-surface-2); color: var(--color-primary);
+  font-weight: 600; font-size: 15px; cursor: pointer; transition: background var(--dur), transform var(--dur);
+}
+.btn-libreria:hover { background: var(--color-accent-soft); }
+.btn-libreria:active { transform: scale(0.97); }
+.btn-libreria svg { width: 22px; height: 22px; }

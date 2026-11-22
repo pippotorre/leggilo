@@ -50,14 +50,14 @@ export async function vistaLettore(app, sorgente) {
   const btnDopo = h('button', { class: 'btn-icona', 'aria-label': 'Pagina successiva', html: icone.indietro, style: { transform: 'scaleX(-1)' } })
   const radice = h('div', { class: 'lettore vista' },
     h('header', { class: 'barra' },
-      h('button', { class: 'btn-icona', 'aria-label': 'Torna alla libreria', html: icone.indietro, onclick: () => esci() }),
+      h('button', { class: 'btn-libreria', 'aria-label': 'Torna alla libreria', onclick: () => esci() }, h('span', { html: icone.indietro }), 'Libreria'),
       titolo, btnIndice, btnTesto),
     pagina, fraseBox,
     h('footer', { class: 'piede' }, btnPrima, stato, voceDisponibile ? btnAscolta : null, btnDopo))
   app.replaceChildren(radice)
 
   let scheda, controller, ultimaPosizione
-  const esci = () => { location.hash = locale_ ? `#/locale/${sorgente.id}` : (scheda ? `#/libro/${scheda.seriesId}` : '#/') }
+  const esci = () => { location.hash = '#/' }
 
   // Progressi
   const salvaProgressoFonte = () => {
@@ -121,7 +121,13 @@ export async function vistaLettore(app, sorgente) {
     pagina.replaceChildren()
     const comuni = {
       impostazioni: { ...imp, colori: coloriTema(temaAttivo() === 'scuro') },
-      onTocco: () => radice.classList.toggle('immerso'),
+      onTocco: () => {
+        const immerso = radice.classList.toggle('immerso')
+        if (immerso && !leggi('suggerimento-comandi', false)) {
+          scrivi('suggerimento-comandi', true)
+          avviso('Tocca di nuovo al centro della pagina per i comandi e per tornare alla libreria', null, 6000)
+        }
+      },
       onPosizione: p => aggiornaPosizione(p),
     }
     if (scheda.formato === 4) {
