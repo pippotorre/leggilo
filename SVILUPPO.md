@@ -108,3 +108,14 @@ Palette "Carta e inchiostro":
 | `--color-primary` | `#4F6D8A` | `#8FAECB` |
 | `--color-accent` | `#C99545` | `#D9AE6A` |
 | `--color-text` | `#2E2E3A` | `#E6E3DC` |
+
+## Idea: app autonoma con i libri sul dispositivo (22 novembre 2026, solo studio)
+
+Richiesta di Pippo: un'app che legge i libri presenti sul telefono, senza dipendere dal serverino, da poter distribuire ad altri.
+
+- Già oggi impaginazione e voce girano sul telefono: il server fornisce solo il file (una volta) e salva i progressi. Il carico su Kavita è minimo.
+- Il cambiamento vero è la **fonte dei libri**: importarli dal telefono (File, Download, "Apri con…") e tenerli nella memoria dell'app, invece di prenderli da Kavita.
+- Strade: PWA pubblica "local-first" (Kavita facoltativo); PWA su Play Store come TWA (come le altre app di Pippo); app nativa (Capacitor) per App Store, "Apri con Leggilo" su iPhone e voce a schermo bloccato.
+- Limiti PWA: su iPhone niente "Apri con" né accesso a cartelle, solo importazione con il selettore di file; su Android si può ricevere un file con "Condividi". Senza server non c'è sincronizzazione dei progressi tra dispositivi.
+
+Stato: domande aperte a Pippo (distribuzione, Kavita facoltativo, hosting pubblico, sincronizzazione).
