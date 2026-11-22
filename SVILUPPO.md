@@ -134,6 +134,14 @@ Risposte di Pippo (22/11): distribuzione su store e ad amici; Kavita resta facol
 
 Da fare dopo:
 - [ ] Android: ricevere i file con "Condividi → Leggilo" (Web Share Target, richiede un service worker personalizzato)
+
+### "Apri con Leggilo" su Android (22 novembre 2026, solo studio)
+
+Domanda di Pippo: Android propone sempre le solite due app per aprire un EPUB, mai Leggilo.
+- Il menu "Apri con" di Android elenca solo le app native che dichiarano di aprire quel tipo di file. Per le PWA esiste `file_handlers` nel manifest, ma Chrome lo supporta solo su computer (Windows, macOS, Linux, ChromeOS), non su Android.
+- Con la PWA installata da Chrome si può comparire in **Condividi** (Web Share Target): dal file manager o da Download, Condividi → Leggilo importa il libro.
+- Con l'app sul **Play Store (TWA)** si può comparire anche in **Apri con**: si aggiunge nel progetto Android un filtro per i file EPUB e PDF e una piccola parte di codice che passa il file alla PWA attraverso lo stesso meccanismo di Condividi.
+- iPhone: né "Apri con" né Condividi verso una PWA; serve l'app nativa.
 - [ ] Play Store come TWA (skill googleplay-store)
 - [ ] App Store: serve un'app nativa (es. Capacitor) e l'account sviluppatore Apple
 - [ ] Verificare se Chrome chiede il permesso "rete locale" quando la versione pubblica chiama il server Tailscale (indirizzo 100.x)
