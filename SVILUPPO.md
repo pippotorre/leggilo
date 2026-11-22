@@ -161,3 +161,15 @@ Decisione di Pippo (22/11): partire subito con Condividi; "Apri con" quando si p
 Segnalazione di Pippo: aperto un libro non era chiaro come tornare a tutti i libri.
 - Nel lettore e nelle schede il pulsante in alto a sinistra è ora "← Libreria" (con testo) e porta sempre alla libreria, non più alla scheda del libro.
 - La prima volta che si nascondono i comandi toccando il centro della pagina compare un suggerimento: "Tocca di nuovo al centro della pagina per i comandi e per tornare alla libreria".
+
+## Idea: voci incluse nell'app (22 novembre 2026, solo studio)
+
+Richiesta di Pippo: oltre alle voci del telefono, voci scelte dall'app: italiano maschile e femminile, e maschile e femminile con inflessione siciliana.
+
+- **Come:** voci neurali Piper eseguite nel browser (WebAssembly + ONNX Runtime, librerie tipo `@mintplex-labs/piper-tts-web`). Ogni voce si scarica una volta su richiesta (circa 20–60 MB) e poi funziona offline.
+- **Vantaggio possibile:** l'audio viene riprodotto come un normale file audio, quindi su iPhone potrebbe continuare a schermo bloccato (da verificare: la generazione delle frasi successive potrebbe fermarsi in secondo piano).
+- **Voci italiane già disponibili (da verificare le licenze prima della distribuzione):** `it_IT-paola-medium` (femminile, buona), `it_IT-riccardo-x_low` (maschile, qualità bassa), `it_IT-serena-high` (femminile, comunità, CC-BY-4.0: richiede l'attribuzione). Una voce maschile di buona qualità non c'è: si può addestrare.
+- **Accento siciliano:** non risultano voci pronte. Serve registrare due persone siciliane (uomo e donna) che leggono circa 1000 frasi in italiano (2–3 ore ciascuna, con Piper Recording Studio) e dare il consenso scritto alla distribuzione della voce; poi addestramento a partire da un modello italiano su una GPU (qualche ora, costo di qualche decina di euro). Non si imitano voci di persone senza consenso.
+- **Limiti:** la generazione sul telefono è più lenta della voce di sistema e consuma più batteria; la qualità media su telefoni vecchi va provata.
+
+Stato: domande aperte a Pippo.
