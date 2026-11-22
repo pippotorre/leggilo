@@ -3,6 +3,7 @@
 App (PWA) per leggere e ascoltare ebook EPUB e PDF, da iPhone, Android e computer.
 
 - **Libri del telefono:** si importano dal dispositivo e restano lì; nessun server necessario
+- **Condividi → Leggilo (Android):** con l'app installata, da file manager o Download si condivide un EPUB/PDF e Leggilo lo importa e lo apre
 - **Kavita facoltativo:** collegando un server Kavita si aggiungono i suoi libri; la posizione di lettura viene salvata su Kavita (la ritrovi anche nell'app Kavita)
 - Libreria per autore con ricerca e "Continua a leggere"
 - Lettore EPUB (foliate-js) con dimensione del testo, interlinea, margini e tema carta/notte

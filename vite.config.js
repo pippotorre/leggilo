@@ -15,6 +15,13 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'prompt',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,mjs,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       includeAssets: ['logo.svg', 'favicon-32.png', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Leggilo',
@@ -31,27 +38,17 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
-      },
-      workbox: {
-        cacheId: 'leggilo-v1',
-        cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,svg,png,mjs,woff2}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/Image/'),
-            handler: 'CacheFirst',
-            options: { cacheName: 'leggilo-copertine', expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+        // Android: "Condividi → Leggilo" per EPUB e PDF (solo con l'app installata)
+        share_target: {
+          action: './condividi',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            files: [{ name: 'libri', accept: ['application/epub+zip', '.epub', 'application/pdf', '.pdf', 'application/octet-stream'] }],
           },
-          {
-            urlPattern: ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET'
-              && !url.pathname.startsWith('/api/Download/') && !url.pathname.startsWith('/api/Reader/pdf'),
-            handler: 'NetworkFirst',
-            options: { cacheName: 'leggilo-dati', networkTimeoutSeconds: 6, expiration: { maxEntries: 300 } },
-          },
-        ],
+        },
       },
     }),
   ],

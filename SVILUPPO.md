@@ -3,7 +3,7 @@
 PWA per leggere e ascoltare gli ebook della libreria Kavita del serverino, su iOS e Android.
 Qui non vanno mai scritte password, chiavi API o token.
 
-Ultimo aggiornamento: 22 novembre 2026 (versione 0.2: libri del telefono).
+Ultimo aggiornamento: 22 novembre 2026 (versione 0.3: Condividi → Leggilo).
 
 ## Scelte
 
@@ -133,7 +133,7 @@ Risposte di Pippo (22/11): distribuzione su store e ad amici; Kavita resta facol
 - Prove automatiche (Chrome, schermo da telefono): benvenuto, importazione di EPUB e PDF, doppioni, modifica, lettura PDF ed EPUB, voce, progressi locali, informazioni, collegamento a Kavita su un altro indirizzo con CORS, apertura di un libro Kavita, eliminazione; modalità serverino senza campo indirizzo.
 
 Da fare dopo:
-- [ ] Android: ricevere i file con "Condividi → Leggilo" (Web Share Target, richiede un service worker personalizzato)
+- [x] Android: ricevere i file con "Condividi → Leggilo" (versione 0.3)
 
 ### "Apri con Leggilo" su Android (22 novembre 2026, solo studio)
 
@@ -142,6 +142,16 @@ Domanda di Pippo: Android propone sempre le solite due app per aprire un EPUB, m
 - Con la PWA installata da Chrome si può comparire in **Condividi** (Web Share Target): dal file manager o da Download, Condividi → Leggilo importa il libro.
 - Con l'app sul **Play Store (TWA)** si può comparire anche in **Apri con**: si aggiunge nel progetto Android un filtro per i file EPUB e PDF e una piccola parte di codice che passa il file alla PWA attraverso lo stesso meccanismo di Condividi.
 - iPhone: né "Apri con" né Condividi verso una PWA; serve l'app nativa.
+
+Decisione di Pippo (22/11): partire subito con Condividi; "Apri con" quando si prepara la TWA.
+
+### Versione 0.3 (22 novembre 2026): Condividi → Leggilo
+
+- `share_target` nel manifest: POST `multipart/form-data` a `./condividi`, campo `libri` (EPUB, PDF, `application/octet-stream` perché alcuni file manager non riconoscono gli EPUB).
+- Service worker personalizzato (`src/sw.js`, vite-plugin-pwa in modalità `injectManifest`): stesse regole di prima (app offline, copertine in cache anche da un server su altro indirizzo, dati Kavita prima dalla rete) più la ricezione dei file condivisi, che vengono messi in un piccolo database (`leggilo-condivisi`) e passati all'app con un reindirizzamento a `#/condivisi`.
+- L'app li importa: con un solo libro lo apre subito (anche se era già presente), con più libri torna alla libreria.
+- Prova automatica: condivisione simulata con un POST verso il service worker (un EPUB, lo stesso di nuovo, due file); app offline dopo il primo avvio.
+- Funziona solo con l'app **installata** da Chrome su Android (Installa app), non con il semplice segnalibro.
 - [ ] Play Store come TWA (skill googleplay-store)
 - [ ] App Store: serve un'app nativa (es. Capacitor) e l'account sviluppatore Apple
 - [ ] Verificare se Chrome chiede il permesso "rete locale" quando la versione pubblica chiama il server Tailscale (indirizzo 100.x)
